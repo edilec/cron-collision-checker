@@ -1,0 +1,18 @@
+{
+  "timezone": "UTC",
+  "horizon": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-08T00:00:00Z"
+  },
+  "limits": {
+    "maxOccurrencesPerJob": 100,
+    "maxTotalOccurrences": 200
+  },
+  "jobs": [
+    {
+      "id": "every-minute",
+      "cron": "* * * * *",
+      "durationMinutes": 5
+    }
+  ]
+}

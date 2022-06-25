@@ -1,0 +1,21 @@
+{
+  "timezone": "America/New_York",
+  "horizon": {
+    "start": "2026-10-31T12:00:00Z",
+    "end": "2026-11-02T12:00:00Z"
+  },
+  "jobs": [
+    {
+      "id": "hourly-sync",
+      "cron": "30 1 * * *",
+      "durationMinutes": 90,
+      "resource": "ledger"
+    },
+    {
+      "id": "reconcile",
+      "cron": "0 1,2 * * *",
+      "durationMinutes": 15,
+      "resource": "ledger"
+    }
+  ]
+}

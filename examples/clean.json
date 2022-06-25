@@ -1,0 +1,45 @@
+{
+  "timezone": "America/New_York",
+  "horizon": {
+    "start": "2026-06-01T00:00:00Z",
+    "end": "2026-06-08T00:00:00Z"
+  },
+  "limits": {
+    "maxOccurrencesPerJob": 200,
+    "maxTotalOccurrences": 2000
+  },
+  "jobs": [
+    {
+      "id": "nightly-backup",
+      "cron": "30 2 * * *",
+      "durationMinutes": 45,
+      "resource": "primary-db"
+    },
+    {
+      "id": "morning-report",
+      "cron": "0 6 * * 1-5",
+      "durationMinutes": 20,
+      "resource": "warehouse"
+    },
+    {
+      "id": "weekly-vacuum",
+      "cron": "0 4 * * SUN",
+      "durationMinutes": 60,
+      "resource": "primary-db"
+    }
+  ],
+  "maintenanceWindows": [
+    {
+      "id": "network-patch",
+      "start": "2026-06-03T12:00:00Z",
+      "end": "2026-06-03T13:00:00Z",
+      "mode": "forbid"
+    },
+    {
+      "id": "weekly-vacuum-slot",
+      "start": "2026-06-07T08:00:00Z",
+      "end": "2026-06-07T09:00:00Z",
+      "mode": "expect"
+    }
+  ]
+}

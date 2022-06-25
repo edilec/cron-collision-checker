@@ -1,0 +1,35 @@
+{
+  "timezone": "America/New_York",
+  "horizon": {
+    "start": "2026-03-07T00:00:00Z",
+    "end": "2026-03-10T00:00:00Z"
+  },
+  "jobs": [
+    {
+      "id": "daily-2am",
+      "cron": "0 2 * * *",
+      "durationMinutes": 30,
+      "resource": "etl"
+    },
+    {
+      "id": "midnight-span",
+      "cron": "45 23 * * *",
+      "durationMinutes": 90,
+      "resource": "etl"
+    },
+    {
+      "id": "early-bird",
+      "cron": "15 0 * * *",
+      "durationMinutes": 30,
+      "resource": "etl"
+    }
+  ],
+  "maintenanceWindows": [
+    {
+      "id": "storage-freeze",
+      "start": "2026-03-09T03:30:00Z",
+      "end": "2026-03-09T05:00:00Z",
+      "mode": "forbid"
+    }
+  ]
+}
