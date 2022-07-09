@@ -46,6 +46,13 @@ are stable across releases; renaming one is a breaking change and is recorded in
 A run occupies the half-open interval `[start, start + durationMinutes)`, so a
 run that ends exactly when the next begins does not overlap it.
 
+Every level of the configuration -- the top level, `horizon`, `limits`, each
+job and each maintenance window -- accepts only the keys listed here. A key
+outside that set is a configuration error, not an ignored extra: a misspelled
+key is evidence you meant to declare, and evaluating nothing while reporting
+`pass` would turn a real failure into a green run. Each unknown key is reported
+at its own pointer, and the run is `incomplete` with exit code `2`.
+
 ## Cron syntax
 
 Supported: `*`, a value, `a-b`, `a-b/s`, `*/s`, comma lists, three-letter month
@@ -64,15 +71,15 @@ that field alone decides.
 
 | ruleId | Severity | Raised when |
 | --- | --- | --- |
-| `config-invalid` | error | the config, `limits`, or `jobs` is the wrong shape |
+| `config-invalid` | error | the config, `limits`, or `jobs` is the wrong shape, or an unknown key appears at the top level or in `limits` |
 | `config-timezone-unknown` | error | a zone name this host's IANA database does not know |
-| `config-horizon-invalid` | error | a malformed instant, or `end` not after `start` |
+| `config-horizon-invalid` | error | a malformed instant, `end` not after `start`, or an unknown key in `horizon` |
 | `config-horizon-too-long` | error | the horizon is longer than `maxHorizonDays` |
 | `limits-invalid` | error | a limit is not an integer in `1..hard cap` |
-| `job-invalid` | error | a job has no usable `id` or a malformed `resource` |
+| `job-invalid` | error | a job has no usable `id`, a malformed `resource`, or an unknown key |
 | `job-duplicate-id` | error | two jobs share an `id` |
 | `job-duration-invalid` | error | `durationMinutes` is missing or out of range |
-| `maintenance-window-invalid` | error | a window has a bad id, bad instants, or an unknown `mode` |
+| `maintenance-window-invalid` | error | a window has a bad id, bad instants, an unknown `mode`, or an unknown key |
 
 ### Cron parsing
 

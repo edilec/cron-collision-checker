@@ -34,5 +34,10 @@ All notable changes to this project are documented in this file.
   code `2`, as `docs/schedule-rules.md` already documented for every bound. A
   truncated overlap sweep used to be reported as a completed `fail` / exit `1`,
   which read as full coverage of the pairs it never compared.
+- unknown keys are now rejected at every configuration level - top level,
+  `horizon`, each job and each maintenance window - the way an unknown `limits`
+  key already was. A misspelled key used to be ignored, so evidence the config
+  actually declared was never evaluated and the run reported `pass` / exit `0`
+  with no findings at all.
 
 No release has been published.

@@ -170,6 +170,36 @@ function emptyCounts() {
   }
 }
 
+/**
+ * Every key the schema defines, per configuration level. A key outside these
+ * lists is rejected rather than ignored: a misspelled key is evidence the user
+ * meant to declare, and silently dropping it turns a real failure into a pass.
+ */
+const CONFIG_KEYS = ['timezone', 'horizon', 'limits', 'jobs', 'maintenanceWindows']
+const HORIZON_KEYS = ['start', 'end']
+const JOB_KEYS = ['id', 'cron', 'durationMinutes', 'timezone', 'resource']
+const MAINTENANCE_WINDOW_KEYS = ['id', 'start', 'end', 'mode']
+
+/**
+ * Report every key at one level that the schema does not define.
+ *
+ * @returns {boolean} true when at least one unknown key was reported, which
+ *   makes the configuration invalid exactly as an unknown limit does.
+ */
+function rejectUnknownKeys(raw, allowed, basePointer, ruleId, subject, sink) {
+  const unknown = Object.keys(raw)
+    .filter((key) => !allowed.includes(key))
+    .sort(compareText)
+  for (const key of unknown) {
+    sink.add(ruleId, 'error', `${subject} has unknown key "${key}"`, {
+      pointer: `${basePointer}/${key}`,
+      evidence: `known keys: ${allowed.join(', ')}`,
+      suggestion: 'Correct the spelling or remove the key; an ignored key would check nothing at all.',
+    })
+  }
+  return unknown.length > 0
+}
+
 function resolveLimits(raw, sink) {
   const limits = { ...DEFAULT_LIMITS }
   if (raw === undefined) return limits
@@ -205,6 +235,7 @@ function validateHorizon(raw, limits, sink) {
     })
     return null
   }
+  if (rejectUnknownKeys(raw, HORIZON_KEYS, '/horizon', 'config-horizon-invalid', '"horizon"', sink)) return null
   const start = parseUtcInstant(raw.start)
   const end = parseUtcInstant(raw.end)
   if (start === null) {
@@ -271,6 +302,10 @@ function validateJobs(raw, defaultTimeZone, limits, sink) {
     const entry = raw[index]
     if (!isPlainObject(entry)) {
       sink.add('job-invalid', 'error', `job at index ${index} must be an object`, { pointer })
+      rejected = true
+      continue
+    }
+    if (rejectUnknownKeys(entry, JOB_KEYS, pointer, 'job-invalid', `job at index ${index}`, sink)) {
       rejected = true
       continue
     }
@@ -403,6 +438,19 @@ function validateMaintenanceWindows(raw, limits, sink) {
         `maintenance window at index ${index} needs a unique "id" of 1-64 identifier characters`,
         { pointer },
       )
+      rejected = true
+      continue
+    }
+    if (
+      rejectUnknownKeys(
+        entry,
+        MAINTENANCE_WINDOW_KEYS,
+        pointer,
+        'maintenance-window-invalid',
+        `maintenance window "${entry.id}"`,
+        sink,
+      )
+    ) {
       rejected = true
       continue
     }
@@ -722,6 +770,10 @@ export function analyzeSchedules(config, options = {}) {
 
   if (!isPlainObject(config)) {
     sink.add('config-invalid', 'error', 'configuration must be a JSON object', { pointer: '' })
+    return finishReport(sink, { incomplete: true, limits: DEFAULT_LIMITS, extras: { checked: 0, counts } })
+  }
+
+  if (rejectUnknownKeys(config, CONFIG_KEYS, '', 'config-invalid', 'configuration', sink)) {
     return finishReport(sink, { incomplete: true, limits: DEFAULT_LIMITS, extras: { checked: 0, counts } })
   }
 

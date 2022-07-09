@@ -272,6 +272,75 @@ test('a config cannot raise a limit past its hard cap', () => {
   assert.equal(exitCodeFor(report), 2)
 })
 
+test('a misspelled top-level key is rejected instead of silently ignored', () => {
+  const windows = [{ id: 'freeze', start: '2026-06-01T06:00:00Z', end: '2026-06-01T08:00:00Z', mode: 'forbid' }]
+  const base = {
+    timezone: NEW_YORK,
+    horizon: { start: '2026-06-01T00:00:00Z', end: '2026-06-02T00:00:00Z' },
+    jobs: [{ id: 'backup', cron: '30 2 * * *', durationMinutes: 45 }],
+  }
+  // Spelled correctly, the window is evaluated and the run fails.
+  const spelled = analyzeSchedules({ ...base, maintenanceWindows: windows })
+  assert.equal(byRule(spelled, 'maintenance-window-collision').length, 1)
+  assert.equal(spelled.status, 'fail')
+
+  // One missing character must not turn that failure into a green run.
+  const typo = analyzeSchedules({ ...base, maintenanceWindow: windows })
+  const invalid = byRule(typo, 'config-invalid')
+  assert.equal(invalid.length, 1)
+  assert.equal(invalid[0].severity, 'error')
+  assert.equal(invalid[0].location.pointer, '/maintenanceWindow')
+  assert.match(invalid[0].message, /unknown key "maintenanceWindow"/)
+  assert.equal(typo.status, 'incomplete', 'a declared key is never ignored')
+  assert.equal(exitCodeFor(typo), 2)
+})
+
+test('a misspelled job key is rejected instead of turning contention into a pass', () => {
+  const base = {
+    timezone: 'UTC',
+    horizon: { start: '2026-06-01T00:00:00Z', end: '2026-06-02T00:00:00Z' },
+  }
+  const spelled = analyzeSchedules({
+    ...base,
+    jobs: [
+      { id: 'first', cron: '0 2 * * *', durationMinutes: 60, resource: 'db' },
+      { id: 'second', cron: '30 2 * * *', durationMinutes: 30, resource: 'db' },
+    ],
+  })
+  assert.equal(byRule(spelled, 'resource-contention').length, 1)
+  assert.equal(spelled.status, 'fail')
+
+  const typo = analyzeSchedules({
+    ...base,
+    jobs: [
+      { id: 'first', cron: '0 2 * * *', durationMinutes: 60, resources: 'db' },
+      { id: 'second', cron: '30 2 * * *', durationMinutes: 30, resources: 'db' },
+    ],
+  })
+  const invalid = byRule(typo, 'job-invalid')
+  assert.equal(invalid.length, 2)
+  assert.deepEqual(
+    invalid.map((finding) => finding.location.pointer),
+    ['/jobs/0/resources', '/jobs/1/resources'],
+  )
+  assert.match(invalid[0].message, /unknown key "resources"/)
+  assert.equal(typo.status, 'incomplete')
+  assert.equal(exitCodeFor(typo), 2)
+})
+
+test('every documented key is still accepted', () => {
+  const report = analyzeSchedules({
+    timezone: 'UTC',
+    limits: { maxOccurrencesPerJob: 100 },
+    horizon: { start: '2026-06-01T00:00:00Z', end: '2026-06-02T00:00:00Z' },
+    jobs: [{ id: 'a', cron: '0 2 * * *', durationMinutes: 30, timezone: NEW_YORK, resource: 'db' }],
+    maintenanceWindows: [{ id: 'w', start: '2026-06-01T06:00:00Z', end: '2026-06-01T06:15:00Z', mode: 'expect' }],
+  })
+  assert.deepEqual(report.findings, [])
+  assert.equal(report.status, 'pass')
+  assert.equal(exitCodeFor(report), 0)
+})
+
 test('invalid input is reported as incomplete, never as a pass', () => {
   const cases = [
     [config({ timezone: 'Mars/Olympus' }), 'config-timezone-unknown'],
@@ -308,6 +377,17 @@ test('invalid input is reported as incomplete, never as a pass', () => {
       }),
       'maintenance-window-invalid',
     ],
+    [
+      config({
+        maintenanceWindows: [{ id: 'w', start: '2026-03-07T00:00:00Z', end: '2026-03-07T01:00:00Z', modes: 'forbid' }],
+      }),
+      'maintenance-window-invalid',
+    ],
+    [
+      config({ horizon: { start: '2026-03-07T00:00:00Z', end: '2026-03-10T00:00:00Z', days: 3 } }),
+      'config-horizon-invalid',
+    ],
+    [config({ limits: { maxOccurrences: 10 } }), 'config-invalid'],
     ['not an object', 'config-invalid'],
   ]
 

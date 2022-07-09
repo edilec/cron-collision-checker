@@ -72,6 +72,10 @@ required and explicit: the tool refuses to guess any of them.
 }
 ```
 
+Unknown keys are rejected at every level rather than ignored, so a one-character
+typo is reported as a configuration error (`incomplete`, exit `2`) instead of
+quietly checking nothing and reporting a pass.
+
 The full field reference, the supported cron grammar and every rule id live in
 [`docs/schedule-rules.md`](./docs/schedule-rules.md).
 
