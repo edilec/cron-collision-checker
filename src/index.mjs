@@ -559,6 +559,12 @@ function pairKey(a, b) {
   return a <= b ? `${a}|${b}` : `${b}|${a}`
 }
 
+/**
+ * Sweep the chronological intervals and report every colliding pair.
+ *
+ * @returns {boolean} true when the comparison budget stopped the sweep early,
+ *   which makes the overlap analysis partial and the whole report incomplete.
+ */
 function detectCollisions(jobs, intervals, limits, sink, counts) {
   const pairs = new Map()
   let active = []
@@ -649,6 +655,8 @@ function detectCollisions(jobs, intervals, limits, sink, counts) {
       },
     )
   }
+
+  return limitHit
 }
 
 function checkMaintenanceWindows(jobs, intervals, windows, sink, counts) {
@@ -852,7 +860,9 @@ export function analyzeSchedules(config, options = {}) {
     (a, b) => a.start - b.start || a.end - b.end || compareText(a.jobId, b.jobId) || a.sequence - b.sequence,
   )
   const jobsByIndex = new Map(jobs.map((job) => [job.index, job]))
-  detectCollisions(jobsByIndex, intervals, limits, sink, counts)
+  // A truncated sweep leaves pairs uncompared, so it is incomplete like every
+  // other bound, never a completed failure.
+  if (detectCollisions(jobsByIndex, intervals, limits, sink, counts)) incomplete = true
   checkMaintenanceWindows(jobsByIndex, intervals, windowResult.windows, sink, counts)
 
   return finishReport(sink, { incomplete, limits, extras: { checked, counts } })

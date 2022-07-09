@@ -230,6 +230,39 @@ test('stopping early names how many jobs were never expanded', () => {
   assert.equal(report.status, 'incomplete')
 })
 
+test('the comparison bound truncates the overlap sweep as incomplete, never as a completed failure', () => {
+  const report = analyzeSchedules(
+    config({
+      timezone: 'UTC',
+      horizon: { start: '2026-06-01T00:00:00Z', end: '2026-06-01T06:00:00Z' },
+      // Every run is still going when the next five start, so the sweep needs
+      // far more than one comparison before it can report anything.
+      limits: { maxComparisons: 1 },
+      jobs: [{ id: 'slow', cron: '0 * * * *', durationMinutes: 300 }],
+    }),
+  )
+  const limit = byRule(report, 'limit-comparisons-exceeded')
+  assert.equal(limit.length, 1)
+  assert.equal(limit[0].severity, 'error')
+  assert.match(limit[0].message, /maxComparisons limit of 1/)
+  assert.equal(report.status, 'incomplete', 'a truncated overlap sweep is never a completed failure')
+  assert.equal(exitCodeFor(report), 2)
+})
+
+test('a complete overlap sweep stays a plain failure', () => {
+  const report = analyzeSchedules(
+    config({
+      timezone: 'UTC',
+      horizon: { start: '2026-06-01T00:00:00Z', end: '2026-06-01T06:00:00Z' },
+      jobs: [{ id: 'slow', cron: '0 * * * *', durationMinutes: 300 }],
+    }),
+  )
+  assert.deepEqual(byRule(report, 'limit-comparisons-exceeded'), [])
+  assert.equal(byRule(report, 'job-self-overlap').length, 1)
+  assert.equal(report.status, 'fail')
+  assert.equal(exitCodeFor(report), 1)
+})
+
 test('a config cannot raise a limit past its hard cap', () => {
   const report = analyzeSchedules(config({ limits: { maxOccurrencesPerJob: 999999 } }))
   const invalid = byRule(report, 'limits-invalid')

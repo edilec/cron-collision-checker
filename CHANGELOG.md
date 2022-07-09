@@ -28,4 +28,11 @@ All notable changes to this project are documented in this file.
 - the rule catalog, limit table and determinism guarantee in
   `docs/schedule-rules.md`.
 
+### Fixed
+
+- `limit-comparisons-exceeded` now makes the report `incomplete` and the exit
+  code `2`, as `docs/schedule-rules.md` already documented for every bound. A
+  truncated overlap sweep used to be reported as a completed `fail` / exit `1`,
+  which read as full coverage of the pairs it never compared.
+
 No release has been published.
