@@ -130,7 +130,7 @@ overlap and the longest overlap.
 | `limit-findings-exceeded` | error | more findings were produced than `maxFindings` |
 | `input-unreadable` | error | (CLI) the config file is missing or not a regular file |
 | `input-too-large` | error | (CLI) the config file is over 1 MiB |
-| `input-unparsable` | error | (CLI) the config file is not valid JSON |
+| `input-unparsable` | error | (CLI) the config file is not valid JSON. The message carries the parser's position, line and column, never the snippet of the file the parser quotes back: V8 reports `Unexpected token 'A', "..." is not valid JSON`, which reproduces a short file in full. |
 | `execution-failure` | error | (CLI) the check threw before producing a report |
 
 Any of these makes the report `incomplete` and the exit code `2`. None of them

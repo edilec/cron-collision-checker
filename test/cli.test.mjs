@@ -161,3 +161,72 @@ test('a config that exceeds the input byte bound is rejected before parsing', as
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+/**
+ * A configuration file is exactly the kind of document that carries a token in
+ * an environment block or a credential in a job command, and this tool writes
+ * its report to stdout -- a stream that is piped into a CI log. Nothing from
+ * inside the file may be echoed.
+ *
+ * The parse-failure path is where that used to break. V8 reports a JSON parse
+ * failure two ways, and one of them quotes the input back:
+ * `Unexpected token 'A', "AKIAIOSFODNN7EXAMPLE" is not valid JSON`. A file
+ * short enough to be nothing but a credential was reproduced in full by its
+ * own error message. Clamping could not repair it -- `clampEvidence` cuts from
+ * the end and the quoted snippet is at the front.
+ *
+ * The canaries are published placeholders, never real credentials: the example
+ * key from the AWS documentation, the standard test card number that
+ * authorises nothing, and a host under the RFC 2606 `.invalid` reserved
+ * top-level domain. Every prefix from eight characters up is scanned on both
+ * streams: a check of the whole value alone passes for a report that leaks all
+ * but the last character.
+ */
+const CANARIES = Object.freeze({
+  'AWS example access key id': 'AKIAIOSFODNN7EXAMPLE',
+  'standard test card number': 'x4111111111111111',
+  'reserved example host': 'api.example.invalid',
+  'bearer-looking token': 'Bearer-ZXhhbXBsZS10b2tlbg',
+})
+
+const MIN_PREFIX = 8
+
+test('an unparsable config is not quoted back by its own parse error', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'cron-collision-checker-'))
+  try {
+    for (const [name, canary] of Object.entries(CANARIES)) {
+      const planted = join(directory, 'planted.json')
+      await writeFile(planted, canary, 'utf8')
+      const result = await cron(['--config', planted, '--label', 'planted.json'])
+      const report = JSON.parse(result.stdout)
+      assert.equal(report.findings[0].ruleId, 'input-unparsable', 'the file must really have failed to parse')
+
+      for (let length = MIN_PREFIX; length <= canary.length; length += 1) {
+        const prefix = canary.slice(0, length)
+        assert.equal(result.stdout.includes(prefix), false, `${name}: "${prefix}" reached stdout`)
+        assert.equal(result.stderr.includes(prefix), false, `${name}: "${prefix}" reached stderr`)
+      }
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+/**
+ * The other half of the fix: a diagnostic that says nothing is a different
+ * defect. A configuration truncated partway through reports a position rather
+ * than a quotation, and that position is what a reader needs to find the spot.
+ */
+test('a parse failure still says where the config went wrong', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'cron-collision-checker-'))
+  try {
+    const broken = join(directory, 'broken.json')
+    await writeFile(broken, '{ "timezone": "UTC", ', 'utf8')
+    const result = await cron(['--config', broken, '--label', 'broken.json'])
+    const { message } = JSON.parse(result.stdout).findings[0]
+    assert.match(message, /position \d+/)
+    assert.match(message, /line \d+ column \d+/)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})

@@ -10,6 +10,7 @@ import {
   analyzeSchedules,
   exitCodeFor,
   formatReport,
+  parseFailureDetail,
   serializeReport,
 } from '../src/index.mjs'
 
@@ -138,7 +139,7 @@ async function loadConfig(path, label) {
     return incompleteReport(
       label,
       'input-unparsable',
-      `configuration is not valid JSON: ${error.message}`,
+      `configuration is not valid JSON: ${parseFailureDetail(error)}`,
       'Validate the file with a JSON parser before re-running.',
     )
   }

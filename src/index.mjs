@@ -72,6 +72,29 @@ function clampEvidence(text) {
 }
 
 /**
+ * Say why a document would not parse, without reproducing any of it.
+ *
+ * V8 reports a JSON parse failure two ways, and one of them quotes the input
+ * back: `Unexpected token 'A', "AKIAIOSFODNN7EXAMPLE" is not valid JSON`. A
+ * configuration short enough to be nothing but a credential is therefore
+ * reproduced in full by its own error message, and that message lands in a
+ * finding on stdout. Clamping does not help: `clampEvidence` cuts from the END
+ * and the quoted snippet sits at the FRONT.
+ *
+ * The position is the useful half and carries no content, so it is kept; the
+ * quoted half is the input and never leaves this function.
+ */
+export function parseFailureDetail(error) {
+  const message = String(error?.message ?? 'could not be parsed')
+  const position = /at position \d+(?: \(line \d+ column \d+\))?/.exec(message)
+  if (position !== null) return message.slice(0, position.index + position[0].length)
+  const token = /^Unexpected token (.+?), ".*?"(?:\.\.\.)? is not valid JSON$/s.exec(message)
+  if (token !== null) return `unexpected token ${token[1]} at the start of the document`
+  if (/^Unexpected end of JSON input$/.test(message)) return message
+  return 'the document could not be parsed as JSON'
+}
+
+/**
  * Parse a strict UTC instant. Only `YYYY-MM-DDTHH:MM[:SS]Z` is accepted so that
  * no host offset or locale can influence the result. Returns null on rejection.
  */
