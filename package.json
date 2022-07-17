@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "node --check src/index.mjs && node --check src/cron.mjs && node --check src/timezone.mjs && node --check bin/cron-collision-checker.mjs && node --check test/cron.test.mjs && node --check test/schedule.test.mjs && node --check test/cli.test.mjs",
+    "lint": "node --check src/index.mjs && node --check src/cron.mjs && node --check src/timezone.mjs && node --check bin/cron-collision-checker.mjs && node --check test/cron.test.mjs && node --check test/schedule.test.mjs && node --check test/cli.test.mjs && node --check test/parse-failure.test.mjs",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=src/**",
     "example": "node bin/cron-collision-checker.mjs --config examples/clean.json",
