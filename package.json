@@ -1,0 +1,51 @@
+{
+  "name": "cron-collision-checker",
+  "version": "0.1.0",
+  "description": "Detect overlapping schedules, timezone ambiguity and missed maintenance windows.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "node --check src/index.mjs && node --check src/cron.mjs && node --check src/timezone.mjs && node --check bin/cron-collision-checker.mjs && node --check test/cron.test.mjs && node --check test/schedule.test.mjs && node --check test/cli.test.mjs && node --check test/parse-failure.test.mjs",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=src/**",
+    "example": "node bin/cron-collision-checker.mjs --config examples/clean.json",
+    "pack:check": "npm pack --dry-run",
+    "check": "npm run lint && npm test && npm run example && npm run pack:check"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edilec/cron-collision-checker.git"
+  },
+  "bin": {
+    "cron-collision-checker": "./bin/cron-collision-checker.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "examples",
+    "docs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cron",
+    "scheduling",
+    "timezone",
+    "dst",
+    "collision",
+    "maintenance-window",
+    "cli"
+  ],
+  "author": "Edilec Private Limited",
+  "bugs": {
+    "url": "https://github.com/edilec/cron-collision-checker/issues"
+  },
+  "homepage": "https://github.com/edilec/cron-collision-checker#readme"
+}
